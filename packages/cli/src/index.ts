@@ -1,11 +1,12 @@
 import { Command, flags } from '@oclif/command'
-import shades from '@theme-color-shades/core'
+import shades, { ColorObj } from '@theme-color-shades/core'
 import chalk from 'chalk'
 import tinyColor from 'tinycolor2'
-// import path from 'path'
+import * as fs from 'fs';
 // import asciiArt from 'ascii-art'
 
-type outputFormat = 'object' | 'array'
+type outputFormat = 'object' | 'array';
+type templateData = string[] | tinyColor.Instance[] | ColorObj
 
 class Cli extends Command {
 	static description = 'CLI command to create a group of color shades ready to be used in your UI library.'
@@ -30,11 +31,17 @@ class Cli extends Command {
 			description:
 				'Color in HEX format. Since # needs to be escaped from terminal, wrap it in quotes or remove the #, e.g. "#312333" or 312333.',
 		},
+		{
+			// see: https://oclif.io/docs/args#__docusaurus
+			name: 'output',
+			required: false,
+			description: 'Output file for ChakraUI theming. Exports a "colors" variable to extend your ChakraUI theme'
+		}
 	]
 
 	async run() {
 		const { args, flags } = this.parse(Cli)
-
+		const templateOutput = async (data: templateData) => `export const colors = {\n\tbrand:${JSON.stringify(data, null, 4)}\n}`;
 		const result = shades({
 			color: args.color,
 			saturation: true,
@@ -73,6 +80,9 @@ class Cli extends Command {
 			`\nWanna see how these shades play out in some components before using?
 Check it out here: https://themecolorshades.com/components/?color=${tinyColor(args.color).toHexString().slice(1)}`
 		)
+		if(args.output){ 
+			templateOutput({...result}).then((r) => fs.writeFileSync(args.output, r)) 
+		}
 	}
 }
 
